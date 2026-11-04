@@ -1,0 +1,16 @@
+{
+  "name": "shiori-server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run src/local.ts",
+    "test": "bun test",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "hono": "^4"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}
