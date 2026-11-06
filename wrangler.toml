@@ -5,5 +5,4 @@ compatibility_date = "2025-01-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "shiori"
-# Create the database first: `wrangler d1 create shiori`, then paste the id here.
-database_id = ""
+database_id = "c9442342-cb54-47e6-affd-0ec474a1faea"
