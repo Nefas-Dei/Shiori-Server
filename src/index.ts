@@ -70,6 +70,20 @@ export function createApp(store: ProgressStorage, allowedTokens: Set<string> | n
         if (!Number.isFinite(updatedAt) || updatedAt <= 0) return bodyFor(c, "'updated_at' must be a timestamp");
         const updatedAtMs = updatedAt > 1e12 ? updatedAt : updatedAt * 1000;
 
+        // Chapter-0 entries come from misdetection (e.g. pushing from a series
+        // index page) and would poison the row: every real position compare
+        // treats them as behind everything. Only "active reading" states
+        // require a positive chapter - status-only updates for unstarted
+        // novels (planned/on hold/dropped) may legitimately report chapter 0.
+        const chapter = Number(raw.chapter);
+        const status = asString(raw.status, "reading").toLowerCase();
+        if (!Number.isFinite(chapter) || chapter < 0) {
+            return bodyFor(c, "'chapter' must be a chapter number");
+        }
+        if (chapter <= 0 && (status === "reading" || status === "completed")) {
+            return bodyFor(c, "'chapter' must be a positive chapter number while reading");
+        }
+
         const id = await entryId(site, seriesKey);
         const incoming: EntryRow = {
             id,
@@ -78,7 +92,7 @@ export function createApp(store: ProgressStorage, allowedTokens: Set<string> | n
             series_key: seriesKey,
             series_title: asString(raw.series_title),
             series_url: asString(raw.series_url),
-            chapter: asNumber(raw.chapter, 0),
+            chapter,
             chapter_title: asString(raw.chapter_title),
             chapter_url: asString(raw.chapter_url),
             scroll_percent: clampPercent(asNumber(raw.scroll_percent, 0)),
