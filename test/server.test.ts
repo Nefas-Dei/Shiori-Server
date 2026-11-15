@@ -77,6 +77,33 @@ describe("PUT /api/v1/progress", () => {
         expect(res.status).toBe(400);
     });
 
+    test("rejects reading-state garbage pushes", async () => {
+        // Misdetection (e.g. pushing from a series index page) must not be
+        // able to poison the stored position, while status-only updates for
+        // unstarted novels (planned/on hold) may still report chapter 0.
+        for (const chapter of [0, -1, "three", null]) {
+            const res = await fetch(base + "/api/v1/progress", authed("PUT", entry({ chapter })));
+            expect(res.status).toBe(400);
+            const json = await res.json();
+            expect(json.error.message).toContain("chapter");
+        }
+
+        const planned = await fetch(
+            base + "/api/v1/progress",
+            authed("PUT", entry({ series_key: "planned-only", chapter: 0, status: "planned" })),
+        );
+        expect(planned.status).toBe(200);
+
+        // Keep the shared bucket state unchanged for the other tests.
+        const cleanup = await fetch(base + "/api/v1/progress?limit=10", authed("GET"));
+        const plannedId = ((await cleanup.json()).entries as { series_key: string; id: string }[])
+            .find((e) => e.series_key === "planned-only")
+            ?.id;
+        expect(plannedId).toBeTruthy();
+        const del = await fetch(`${base}/api/v1/progress/${plannedId}`, authed("DELETE"));
+        expect((await del.json()).applied).toBe(true);
+    });
+
     test("stores entry and returns applied entry", async () => {
         const res = await fetch(base + "/api/v1/progress", authed("PUT", entry()));
         expect(res.status).toBe(200);
